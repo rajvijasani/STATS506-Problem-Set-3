@@ -171,7 +171,76 @@ The Chi-square test with a Chi-square statistic of 69.683 and p value of near ze
 
 ## Problem 2 - Sakila
 ```{r}
+library(DBI)
+library(RSQLite)
+sakila <- dbConnect(SQLite(), "data/sakila_master.db")
+```
+a.
+```{r}
+dbGetQuery(
+  sakila,
+  "SELECT release_year, COUNT(film_id)
+  FROM film
+  GROUP BY release_year
+  ORDER BY release_year
+  LIMIT 1"
+)
+```
+b.
 
+SQL + R:
+```{r}
+film <- dbGetQuery(sakila, "SELECT * FROM film_category")
+category <- dbGetQuery(sakila, "SELECT * FROM category")
+merged_fc <- merge(film, category, by = "category_id")
+m_count <- table(merged_fc$name)
+print(m_count[which.min(m_count)])
+```
+SQL only:
+```{r}
+dbGetQuery(
+  sakila,
+  "SELECT c.name AS genre, COUNT(fc.film_id) as m_count
+  FROM category as c
+  INNER JOIN film_category as fc ON c.category_id = fc.category_id
+  GROUP BY c.name
+  ORDER BY m_count
+  LIMIT 1"
+)
+```
+c.
+
+SQL + R:
+```{r}
+customer <- dbGetQuery(sakila, "SELECT customer_id, address_id FROM customer")
+address <- dbGetQuery(sakila, "SELECT address_id, city_id FROM address")
+city <- dbGetQuery(sakila, "SELECT city_id, country_id FROM city")
+country <- dbGetQuery(sakila, "SELECT country_id, country FROM country")
+
+merge_ca <- merge(customer, address, by = "address_id")
+merge_cac <- merge(merge_ca, city, by = "city_id")
+merge_all <- merge(merge_cac, country, by = "country_id")
+c_count <- table(merge_all$country)
+print(c_count[c_count == 13])
+```
+SQL only:
+```{r}
+dbGetQuery(
+  sakila,
+  "SELECT country, COUNT(country) AS c_count
+  FROM country as co
+  RIGHT JOIN
+    (SELECT country_id
+    FROM city as ci
+    RIGHT JOIN
+      (SELECT city_id
+      FROM address as a
+      RIGHT JOIN customer AS c ON a.address_id=c.address_id
+      ) AS ac ON ci.city_id=ac.city_id
+    ) AS acc ON co.country_id=acc.country_id
+  GROUP BY country
+  HAVING c_count==13"
+)
 ```
 
 ## Problem 3 - US Record
