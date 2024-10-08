@@ -245,6 +245,52 @@ dbGetQuery(
 
 ## Problem 3 - US Record
 ```{r}
-
+us500 <- read.csv("data/us-500.csv")
 ```
+a.
+```{r}
+print(sum(grepl(".com$", us500$email)) / nrow(us500))
+```
+b.
+```{r}
+emails <- us500$email
+# removing the TLD
+emails_no_tld <- sub("\\.[a-zA-Z]{2,}$", "", emails)
+print(sum(grepl("[^a-zA-Z0-9@]", emails_no_tld)) / nrow(us500))
+```
+c.
+```{r}
+area_p1 <- substr(us500$phone1, 1, 3)
+area_p2 <- substr(us500$phone2, 1, 3)
+all_area <- c(area_p1, area_p2)
+print(sort(table(all_area), decreasing = TRUE)[1:5])
+```
+d.
 
+For this question, I quickly browsed through the data to notice that there were 2 types of observations that has numbers at the end, one where the number was preceded by a '#' (e.g. '#5435') and others that did not (e.g. 'Highway 67'). The other case clearly does not indicate an apartment number so I will only be extracting numbers at the end that are preceded by a '#'.
+```{r}
+# checking if an address ends in # followed by numbers
+# if yes, we substitute the address
+# with the apartment number captured in the capture group
+# else, we substitute NA
+apartment_num <- ifelse(grepl("#[0-9]+$", us500$address),
+                        sub(".*#([0-9]+)$", "\\1", us500$address),
+                        NA)
+# cleaning data by removing NA and converting to numeric values
+apartment_num <- na.omit(apartment_num)
+apartment_num <- as.numeric(apartment_num)
+#
+hist(log(apartment_num))
+```
+*Attribution of source:* Asked ChatGPT for idea to handle address that do not end in '#' followed by number.
+
+e.
+```{r}
+# frequency (in %) of occurrence of leading digits in our data
+print(table(substr(apartment_num, 1, 1)) / length(apartment_num) * 100)
+# frequency (in %) of occurrence of leading digits according to Benford's law
+print((log10((1:9) + 1) - log10(1:9)) * 100)
+```
+Looking at the frequencies of occurrence of leading digits in our data and the frequencies that each digit should follow according to Benford's law, we can clearly see that Benford's law is not followed, rather they have almost equal frequencies. And that's why the apartment numbers can not pass as real data.
+
+*Attribution of source:* Wikipedia page on Benford's law for frequency distribution
